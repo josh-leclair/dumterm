@@ -4,7 +4,7 @@ A terminal that runs your macros, not your shell. Windows-only, Electron + vanil
 
 ## Setup
 
-Needs Node.js (LTS is fine) Then:
+Needs Node.js (LTS is fine). Then:
 
 ```
 cd dumterm
@@ -125,13 +125,13 @@ or changes other people prompts you first unless you use `do!`.
 
 For a natural-language IF/ELSE macro, the model now has a dedicated
 `create_branching_macro` tool. It takes actions before the choice, one condition,
-the live/offline (or true/false) branches, and actions after it. Dumterm turns that
+the true/false branches, and actions after it. Dumterm turns that
 into the same normal flat macro actions used everywhere else, and evaluates the
 shared condition only once per run. That makes a request like this reliable even
 with smaller local models:
 
 ```
-do create bedtime: show this week's weather here and in Chicago; if Ninja is live open his stream, otherwise play some lofi; then wait 5 minutes and turn off my gaming lights
+do create gameday: show today's weather; if the Dodgers are playing today play some hype music, otherwise play some lofi; then set a 30 minute timer
 ```
 
 If `do` throws a 400 or LM Studio logs a "Channel Error": run `config lmstudio.test`.
@@ -255,8 +255,7 @@ Isolation: plugins run with the privileged globals (`window`, `require`, `proces
 `dum`, `fetch`) shadowed out of scope. A plugin can only touch the `ctx` object the
 core hands it — `ctx.http`, `ctx.oauth`, `ctx.config`, `ctx.events`, `ctx.notify`,
 `ctx.runMacro`, `ctx.open`, `ctx.print`/`ctx.println`, `ctx.markdown`, `ctx.editText`,
-`ctx.shared(group)` (borrow another plugin's config/OAuth, e.g. chatwatch reusing
-streamwatch's Twitch app), and the register functions (`registerCommand`,
+`ctx.shared(group)` (borrow another plugin's config/OAuth), and the register functions (`registerCommand`,
 `registerAction`, `registerAgentTool`, `registerOperation`, `registerPanel`,
 `registerState`, `registerCompletion`, `registerHelp`, `registerAgentContext`,
 plus `safeTools`/`configHint`). It can't reach the OS, the filesystem, or the IPC
@@ -277,62 +276,6 @@ while at least one visible plugin has content. Drag the dock's left divider to
 resize it; double-click the divider to return it to the default width. Core owns
 visibility: use `panel`, `panel my-panel`, or `panel my-panel on|off`.
 `status <plugin>` remains a compatibility alias.
-
-### Session event tracker
-
-The included `eventtracker` plugin exposes `events` and an Activity card in the
-right dock. It records the current session only: Twitch chat mentions and
-live/offline changes, Spotify track/playback changes, plugin notifications,
-plugin commands/actions, macro runs, and timer lifecycle changes. Try `events`,
-`events 25`, or `events clear`.
-
-Plugins can participate without depending on the tracker UI:
-
-```js
-ctx.events.emit({ type: "myplugin.updated", title: "Thing changed", detail: "Useful context" });
-ctx.events.subscribe((event) => { /* react later */ }, { replay: true });
-```
-
-The event tracker is deliberately observational for now. Once we see the useful
-patterns, those same events can become the inputs for saved rules and automations.
-
-### Event rules
-
-The `eventrouter` plugin connects structured events to ordinary saved macros.
-This is how an external state change can drive the stream overlay without putting
-anything on screen unless you explicitly opt in. For example, create a macro whose
-overlay text action is `{event.track} - {event.artist}`, then route Spotify track
-changes to it:
-
-```text
-eventrule add spotify spotify.track.changed now_playing_overlay 5s
-```
-
-Event-triggered macros receive named fields from the event payload, including
-`{event.app}`, `{event.type}`, `{event.title}`, `{event.text}`, `{event.track}`,
-`{event.artist}`, and `{event.from}`. The same fields are available as
-`{event.payload.track}`-style paths. A rule has an app/type match, optional text
-filter, enabled state, and cooldown; use `eventrule list`, `eventrule remove`,
-`eventrule enable`, and `eventrule disable` to manage them. Run `panel eventrule`
-to show or hide the Event Rules sidebar card. The agent has matching
-event-rule tools too.
-
-### Twitch: Streamwatch + Chatwatch
-
-Streamwatch and Chatwatch share one Twitch app configuration and one protected
-OAuth token. Configure only:
-
-```
-config streamwatch.clientId <id>
-config streamwatch.clientSecret <secret>
-```
-
-In the Twitch developer console, register both redirect URLs on that same app:
-`http://localhost:8124/callback` for Streamwatch and
-`http://localhost:8126/callback` for Chatwatch. The first `chatwatch connect` or
-`chatwatch watch <channel>` prompts once for Twitch's chat-read permission; no
-`chatwatch.clientId` or `chatwatch.clientSecret` entries are needed. Their live
-and mention panels appear as separate cards in the right dock.
 
 ### Spotify plugin
 
@@ -360,45 +303,6 @@ and the bare aliases (`play`, `pause`, `now`, …) work — they're the same han
 so `do play some lofi and set my lights` works, and a macro can open your editor and
 start a playlist in one step.
 
-### OBS plugin
-
-Controls OBS through obs-websocket v5, which is built into modern OBS.
-
-1. In OBS: Tools -> WebSocket Server Settings -> enable the server.
-2. In dumterm:
-   ```
-   config obs.url ws://127.0.0.1:4455
-   config obs.password <password>   (only if you enabled one)
-   obs status
-   ```
-
-Commands: `obs scenes` · `obs scene <name>` · `obs record start|stop|toggle` ·
-`obs stream start|stop|toggle` · `obs replay save` ·
-`obs source <source> show|hide`.
-
-Additional OBS controls: `obs status`, `obs inputs`,
-`obs virtualcam start|stop|toggle`, `obs replay start|stop|status|save`, and
-`obs mute <input> on|off|toggle|status`.
-
-There is also an `obs` macro action type and agent tools, so the local model can
-build commands like "switch to Starting Soon, start recording, and bind it to
-the panic button".
-
-## Stream overlay setup checks
-
-The overlay plugin can drive the PocketBase Stream Project used by OBS browser
-sources. Use `overlay setup` for the exact PocketBase field names and types,
-then `overlay doctor` when stage dragging, OBS sizing, animations, or
-clear-after behavior does not work. Doctor checks the 9 seeded slot records and
-the optional placement fields (`x`, `y`, `width`, `zone`, `animation`, `animation_speed`, `text_scale`, `duration_ms`,
-`clear_after_animation`, `render_key`) that unlock the newer free-placement
-workflow. A `zone` is a precise saved placement name created in the control
-site, for example `now-playing`; use `overlay zones` to list them and
-`overlay zone now-playing text ...` to target one. The nine legacy `position`
-values only identify reusable backing records; `x`, `y`, and `width` determine
-what viewers see, and new macros should target `zone`. The local model can call the
-matching `overlay_list_zones`, `overlay_doctor`, and `overlay_setup_guide` tools too.
-
 ## Where your data lives
 
 `%APPDATA%/dumterm/data/commands.json` stays ordinary JSON, so it is easy to back up
@@ -419,3 +323,8 @@ than editing the encrypted file directly.
   ask for, but you should still only drop plugin files into `plugins/` that you
   wrote or reviewed.
 
+## Later: a real .exe
+
+When you want a packaged build that lives in your startup folder:
+`npm i -D electron-builder`, add a build config, `npx electron-builder --win`.
+Not needed to use it day to day.
