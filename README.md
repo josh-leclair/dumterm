@@ -4,7 +4,7 @@ A terminal that runs your macros, not your shell. Windows-only, Electron + vanil
 
 ## Setup
 
-Needs Node.js (LTS is fine — you likely have it from Inkbot). Then:
+Needs Node.js (LTS is fine) Then:
 
 ```
 cd dumterm
@@ -419,8 +419,3 @@ than editing the encrypted file directly.
   ask for, but you should still only drop plugin files into `plugins/` that you
   wrote or reviewed.
 
-## Later: a real .exe
-
-When you want a packaged build that lives in your startup folder:
-`npm i -D electron-builder`, add a build config, `npx electron-builder --win`.
-Not needed to use it day to day.
