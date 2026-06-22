@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>dumterm</title>
+  <link rel="stylesheet" href="node_modules/@xterm/xterm/css/xterm.css" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #0c0e10;
+      overflow: hidden;
+    }
+    #app-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      width: 100%;
+      height: 100%;
+    }
+    #app-shell.has-dock:not(.has-chat) { grid-template-columns: minmax(0, 1fr) 6px minmax(260px, var(--dock-width, 340px)); }
+    #app-shell.has-chat:not(.has-dock) { grid-template-columns: minmax(0, 1fr) var(--chat-width, 360px); }
+    #app-shell.has-dock.has-chat { grid-template-columns: minmax(0, 1fr) 6px minmax(260px, var(--dock-width, 340px)) var(--chat-width, 360px); }
+    /* an empty region is hidden — [hidden] must beat the display:flex below it, or it
+       keeps occupying a grid cell and squeezes/stacks the terminal */
+    #plugin-dock[hidden], #plugin-chat[hidden], #plugin-dock-resizer[hidden] { display: none; }
+    #terminal-area { position: relative; min-width: 0; min-height: 0; }
+    #term {
+      position: absolute;
+      inset: 0;
+      padding: 10px 6px 10px 12px;
+    }
+    #plugin-dock {
+      min-width: 0;
+      box-sizing: border-box;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid #23262c;
+      background: #0e1013;
+      color: #c9cdd4;
+      font-family: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+      padding: 10px;
+    }
+    #plugin-dock-resizer {
+      display: none;
+      cursor: col-resize;
+      background: #23262c;
+      transition: background 120ms ease;
+      touch-action: none;
+    }
+    #plugin-dock-resizer:hover,
+    #plugin-dock-resizer.is-dragging { background: #58d6c3; }
+    #app-shell.has-dock #plugin-dock-resizer { display: block; }
+    #plugin-dock-panels { display: flex; flex-direction: column; gap: 10px; flex: 1 1 auto; min-height: 0; }
+    .plugin-dock-panel {
+      flex: 0 0 auto;
+      border: 1px solid #2e343c;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #101318;
+    }
+    /* a "right-full" panel (e.g. live twitch chat) grows to fill the leftover dock
+       height and scrolls inside itself, so it sits alongside the compact cards
+       instead of shoving them away */
+    .plugin-dock-panel--full {
+      flex: 1 1 auto;
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+    }
+    .plugin-dock-panel--full .plugin-dock-body { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
+    /* the chat column is its own full-height region, separate from the compact card dock */
+    #plugin-chat {
+      min-width: 0;
+      box-sizing: border-box;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid #23262c;
+      background: #0e1013;
+      color: #c9cdd4;
+      font-family: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+      padding: 10px;
+    }
+    #plugin-chat-panels { display: flex; flex-direction: column; gap: 10px; flex: 1 1 auto; min-height: 0; }
+    .plugin-dock-title {
+      padding: 7px 9px;
+      border-bottom: 1px solid #2e343c;
+      color: #9fa8b5;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .plugin-dock-body {
+      padding: 9px;
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    /* faint CRT scanlines — toggled by the `crt` command */
+    #scanlines {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0px,
+        rgba(0, 0, 0, 0) 2px,
+        rgba(0, 0, 0, 0.18) 3px
+      );
+      z-index: 5;
+    }
+    body.crt #scanlines { display: block; }
+    /* drop highlight */
+    #dropglow {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border: 2px dashed transparent;
+      z-index: 6;
+      transition: border-color 120ms ease;
+    }
+    body.dropping #dropglow { border-color: rgba(120, 220, 170, 0.6); }
+    /* faint, minimal scrollbar */
+    .xterm-viewport::-webkit-scrollbar { width: 6px; }
+    .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
+    .xterm-viewport::-webkit-scrollbar-thumb {
+      background: rgba(160, 170, 185, 0.12);
+      border-radius: 3px;
+    }
+    .xterm-viewport::-webkit-scrollbar-thumb:hover {
+      background: rgba(160, 170, 185, 0.3);
+    }
+    .xterm-viewport { scrollbar-width: thin; scrollbar-color: rgba(160,170,185,0.15) transparent; }
+  </style>
+</head>
+<body>
+  <div id="app-shell">
+    <main id="terminal-area">
+      <div id="term"></div>
+      <div id="scanlines"></div>
+      <div id="dropglow"></div>
+    </main>
+    <div id="plugin-dock-resizer" role="separator" aria-label="Resize plugin dock" aria-orientation="vertical" hidden></div>
+    <aside id="plugin-dock" aria-label="Plugin panels" hidden>
+      <div id="plugin-dock-panels"></div>
+    </aside>
+    <aside id="plugin-chat" aria-label="Live chat" hidden>
+      <div id="plugin-chat-panels"></div>
+    </aside>
+  </div>
+  <script src="node_modules/@xterm/xterm/lib/xterm.js"></script>
+  <script src="node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

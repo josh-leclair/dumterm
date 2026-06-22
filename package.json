@@ -1,0 +1,26 @@
+{
+  "name": "dumterm",
+  "version": "0.1.0",
+  "description": "A terminal that runs your macros, not your shell.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "verify": "npm run verify:storage && npm run verify:terminal && npm run verify:burst && npm run verify:plugins && npm run verify:caps && npm run verify:panels && npm run verify:editor && npm run verify:tab",
+    "test": "npm run verify",
+    "verify:storage": "node tools/secure-storage-smoke.js",
+    "verify:terminal": "node tools/terminal-lines-smoke.js",
+    "verify:burst": "node tools/burst-smoke.js",
+    "verify:plugins": "node tools/plugin-strict-smoke.js",
+    "verify:caps": "node tools/plugin-capabilities-smoke.js",
+    "verify:panels": "node tools/panels-smoke.js",
+    "verify:editor": "node tools/editor-smoke.js",
+    "verify:tab": "node tools/tabcomplete-smoke.js"
+  },
+  "dependencies": {
+    "@xterm/xterm": "^5.5.0",
+    "@xterm/addon-fit": "^0.10.0"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0"
+  }
+}

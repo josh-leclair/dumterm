@@ -1,0 +1,21 @@
+# dependencies — re-created by `npm install`
+node_modules/
+
+# packaged builds
+dist/
+out/
+*.exe
+
+# local app data + secrets. dumterm keeps these in %APPDATA%/dumterm/data, NOT here,
+# but ignore them defensively so a stray copy can never be committed.
+data/
+config.json
+commands.json
+*-tokens.json
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
