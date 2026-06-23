@@ -1,3 +1,13 @@
+This is a bit of an experiment with AI coding. I can't code, at all, but I wanted a very specific program. A hub, text based, that tied together everything I might need. Reading a twitch chat and highlighting key words, check the weather, control my govee lights, check a sports score, control spotify or discord. All of this and more tied into a local LLM to preemptively act on events or let me give it commands in plain language. All of these and more generating actionable events and forming them in a way that even a smaller model, such as Gemma 4 on a 16GB mac mini, can take action on. 
+
+Turn on the office lights, if caseoh is streaming, open his stream, if not play the album ca$ino on Spotify. Start stream in OBS and put up the starting soon overlay. 
+If security camera detects motion, mute discord and turn off my camera.
+If the dodgers score, play sound on discord and stream. 
+
+In my opinion one of the greatest things LLM advances has brought is the ability to make something that serves a single users needs, something that might not have been built because it's too hyper specific.  Given how LLM's have been trained on the worlds collective knowledge without their consent, I also feel the need to make sure that anything I create with it, should be shared freely as well. Below is a completely AI generated readme for this. Not all plugins have been included as of yet, I'd prefer to make sure some of the plugins don't contain any sensitive information before including them. 
+
+If you have questions, you can reach me at my user name, minus the - @gmail.com . I'm sure this isn't done well but it serves my needs. 
+
 # dumterm
 
 A terminal that runs your macros, not your shell. Windows-only, Electron + vanilla JS, no build step.
